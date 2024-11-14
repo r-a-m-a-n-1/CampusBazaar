@@ -1,100 +1,223 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
+import defaultProfileImage from './profilePic.png'; // Adjust path as needed
 
 const ProfilePage = () => {
-    const { user, updateUser } = useAuthStore(); // Assuming you have user data in your authStore
-    const [editing, setEditing] = useState(false);
-    const [name, setName] = useState(user.name);
-    const [email, setEmail] = useState(user.email);
-    const [profileImage, setProfileImage] = useState(user.profileImage);
+    const { user, updateUser } = useAuthStore();
+    const [formData, setFormData] = useState({
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage || defaultProfileImage,
+        mobileNumber: user.mobileNumber || '',
+        alternateMobile: user.alternateMobile || '',
+        gender: user.gender || '',
+        hostelName: user.hostelName || '',
+        roomNumber: user.roomNumber || '',
+        enrollmentNumber: user.enrollmentNumber || '',
+        permanentAddress: user.permanentAddress || ''
+    });
+    const [isEditable, setIsEditable] = useState(false);
 
-    // Handle file upload for profile image
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setProfileImage(reader.result);  // Update profile image preview
-            updateUser({ ...user, profileImage: reader.result }); // Save to store
-        };
-        reader.readAsDataURL(file);
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prevData) => ({ ...prevData, [name]: value }));
     };
 
-    const handleSave = () => {
-        updateUser({ ...user, name, email, profileImage });  // Update user info in authStore
-        setEditing(false);
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                setFormData((prevData) => ({ ...prevData, profileImage: reader.result }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const toggleEdit = () => {
+        setIsEditable((prev) => !prev);
+    };
+
+    const validateForm = () => {
+        const { name, mobileNumber, gender, hostelName, roomNumber, permanentAddress } = formData;
+        if (!name || !mobileNumber || !gender || !hostelName || !roomNumber || !permanentAddress) {
+            alert('Please fill in all the fields');
+            return false;
+        }
+
+        const mobileRegex = /^[0-9]{10}$/;
+        if (!mobileRegex.test(mobileNumber)) {
+            alert('Please enter a valid 10-digit mobile number');
+            return false;
+        }
+
+        return true;
+    };
+
+    const handleSave = async () => {
+        if (validateForm()) {
+            await updateUser(formData);  // Update the profile in the store
+            setIsEditable(false);
+            alert('Profile updated successfully!');
+        }
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg mt-10">
-            <h2 className="text-2xl font-semibold text-center mb-6">Profile</h2>
+        <div className="font-sans bg-gray-100 min-h-screen flex flex-col items-center py-10">
+            <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-8">
+                <h1 className="text-center text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-teal-400 to-emerald-500 mb-6">
+                    Personal Information
+                </h1>
 
-            <div className="flex items-center space-x-4 mb-6">
-                {/* Profile Image */}
-                <div className="relative">
-                    <img
-                        src={profileImage || 'https://via.placeholder.com/150'}
-                        alt="Profile"
-                        className="w-32 h-32 rounded-full object-cover"
-                    />
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={handleImageUpload}
-                    />
-                    <span className="absolute bottom-0 right-0 bg-green-500 text-white p-1 rounded-full">Edit</span>
+                <div className="flex flex-col items-center mb-6">
+                    <label htmlFor="profileImageUpload" className="cursor-pointer">
+                        <img
+                            src={formData.profileImage}
+                            alt="Profile"
+                            className="w-32 h-32 rounded-full object-cover border-4 border-green-500 shadow-md"
+                        />
+                    </label>
+                    {isEditable && (
+                        <input
+                            type="file"
+                            id="profileImageUpload"
+                            className="hidden"
+                            onChange={handleImageUpload}
+                        />
+                    )}
                 </div>
 
-                <div className="flex-1">
-                    {/* User Information */}
-                    <div className="mb-4">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
-                        {editing ? (
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-                            />
-                        ) : (
-                            <p className="text-gray-700">{name}</p>
-                        )}
+                <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Name</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            readOnly
+                            className="mt-1 block w-full border border-gray-300 bg-gray-100 p-2 rounded-md shadow-sm"
+                        />
                     </div>
-
-                    <div className="mb-4">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                        {editing ? (
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-                            />
-                        ) : (
-                            <p className="text-gray-700">{email}</p>
-                        )}
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Email</label>
+                        <input
+                            type="email"
+                            value={formData.email}
+                            readOnly
+                            className="mt-1 block w-full border border-gray-300 bg-gray-100 p-2 rounded-md shadow-sm"
+                        />
                     </div>
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Mobile Number</label>
+                        <input
+                            type="tel"
+                            name="mobileNumber"
+                            value={formData.mobileNumber}
+                            onChange={handleInputChange}
+                            pattern="[0-9]{10}"
+                            className={`mt-1 block w-full border p-2 rounded-md shadow-sm ${
+                                isEditable ? 'bg-white' : 'bg-gray-100'
+                            }`}
+                            placeholder="Enter a valid mobile number"
+                            disabled={!isEditable}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Alternate Mobile</label>
+                        <input
+                            type="tel"
+                            name="alternateMobile"
+                            value={formData.alternateMobile}
+                            onChange={handleInputChange}
+                            pattern="[0-9]{10}"
+                            className={`mt-1 block w-full border p-2 rounded-md shadow-sm ${
+                                isEditable ? 'bg-white' : 'bg-gray-100'
+                            }`}
+                            disabled={!isEditable}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Gender</label>
+                        <select
+                            name="gender"
+                            value={formData.gender}
+                            onChange={handleInputChange}
+                            className={`mt-1 block w-full border p-2 rounded-md shadow-sm ${
+                                isEditable ? 'bg-white' : 'bg-gray-100'
+                            }`}
+                            disabled={!isEditable}
+                        >
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Hostel Name</label>
+                        <input
+                            type="text"
+                            name="hostelName"
+                            value={formData.hostelName}
+                            onChange={handleInputChange}
+                            className={`mt-1 block w-full border p-2 rounded-md shadow-sm ${
+                                isEditable ? 'bg-white' : 'bg-gray-100'
+                            }`}
+                            disabled={!isEditable}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Room Number</label>
+                        <input
+                            type="text"
+                            name="roomNumber"
+                            value={formData.roomNumber}
+                            onChange={handleInputChange}
+                            className={`mt-1 block w-full border p-2 rounded-md shadow-sm ${
+                                isEditable ? 'bg-white' : 'bg-gray-100'
+                            }`}
+                            disabled={!isEditable}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-lg font-medium text-gray-700">Enrollment Number</label>
+                        <input
+                            type="text"
+                            name="enrollmentNumber"
+                            value={formData.enrollmentNumber}
+                            onChange={handleInputChange}
+                            className={`mt-1 block w-full border p-2 rounded-md shadow-sm ${
+                                isEditable ? 'bg-white' : 'bg-gray-100'
+                            }`}
+                            disabled={!isEditable}
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-lg font-medium text-gray-700">Permanent Address</label>
+                        <textarea
+                            name="permanentAddress"
+                            value={formData.permanentAddress}
+                            onChange={handleInputChange}
+                            className={`mt-1 block w-full border p-2 rounded-md shadow-sm ${
+                                isEditable ? 'bg-white' : 'bg-gray-100'
+                            }`}
+                            rows="3"
+                            disabled={!isEditable}
+                        />
+                    </div>
+                </form>
 
-                    {/* Edit & Save buttons */}
-                    {editing ? (
-                        <div className="space-x-4">
-                            <button
-                                className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
-                                onClick={handleSave}
-                            >
-                                Save
-                            </button>
-                            <button
-                                className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700"
-                                onClick={() => setEditing(false)}
-                            >
-                                Cancel
-                            </button>
-                        </div>
+                <div className="flex justify-center mt-6">
+                    {isEditable ? (
+                        <button
+                            onClick={handleSave}
+                            className="bg-green-500 text-white px-6 py-2 rounded shadow mr-4"
+                        >
+                            Save
+                        </button>
                     ) : (
                         <button
-                            className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-700"
-                            onClick={() => setEditing(true)}
+                            onClick={toggleEdit}
+                            className="bg-blue-500 text-white px-6 py-2 rounded shadow"
                         >
                             Edit Profile
                         </button>
